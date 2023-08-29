@@ -3,11 +3,11 @@ use std::ops::BitXor;
 #[derive(Debug, Clone, Default)]
 /// represents the internal state of multiple encoders. (each bit is its own encoder)
 /// 
-/// for more detail on how this works see [https://youtu.be/kRIfpmiMCpU](this)
+/// for more detail on how this works see [this video](https://youtu.be/kRIfpmiMCpU)
 pub struct EncoderState<T: BitXor + Copy>(T, T);
 
 impl<T: BitXor<Output = T> + Copy> EncoderState<T> {
-	/// input a chunk to the encoder
+	/// input a chunk to the encoder, updating state and returning the 2 chunks that should be transmitted
 	pub fn input(&mut self, chunk: T) -> (T, T) {
 		let ans = (
 			self.1 ^ chunk,
