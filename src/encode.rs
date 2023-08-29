@@ -1,9 +1,9 @@
 use std::ops::BitXor;
 
 #[derive(Debug, Clone, Default)]
-/// represents the internal state of multiple encoders. (each bit is its own encoder, this should make the encoder *much* more efficent than a bit by bit encoder)
+/// represents the internal state of multiple encoders. (each bit is its own encoder)
 /// 
-/// for more detail on how this works see [https://youtu.be/kRIfpmiMCpU?list=PLvJZZcg6Js7oiWPv5XVBXQp8vjffJkz5W](this)
+/// for more detail on how this works see [https://youtu.be/kRIfpmiMCpU](this)
 pub struct EncoderState<T: BitXor + Copy>(T, T);
 
 impl<T: BitXor<Output = T> + Copy> EncoderState<T> {
