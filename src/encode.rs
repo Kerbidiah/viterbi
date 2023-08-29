@@ -1,25 +1,20 @@
-#[derive(Debug, Clone)]
-/// represents the internal state of 8 encoders. (each bit of a byte has its own encoder, this should make the encoder *much* more efficent)
-/// I think this could even be extended to like u64 or even u128 if we wanted to
+use std::ops::BitXor;
+
+#[derive(Debug, Clone, Default)]
+/// represents the internal state of multiple encoders. (each bit is its own encoder, this should make the encoder *much* more efficent than a bit by bit encoder)
 /// 
 /// for more detail on how this works see [https://youtu.be/kRIfpmiMCpU?list=PLvJZZcg6Js7oiWPv5XVBXQp8vjffJkz5W](this)
-pub struct EncoderState(u8, u8);
+pub struct EncoderState<T: BitXor + Copy>(T, T);
 
-impl Default for EncoderState {
-	fn default() -> Self {
-		Self(0, 0)
-	}
-}
-
-impl EncoderState {
-	/// input a byte to the encoder
-	pub fn input(&mut self, byte: u8) -> (u8, u8) {
+impl<T: BitXor<Output = T> + Copy> EncoderState<T> {
+	/// input a chunk to the encoder
+	pub fn input(&mut self, chunk: T) -> (T, T) {
 		let ans = (
-			self.1 ^ byte,
-			self.0 ^ self.1 ^ byte
+			self.1 ^ chunk,
+			self.0 ^ self.1 ^ chunk
 		);
 
-		self.update(byte);
+		self.update(chunk);
 
 		ans
 	}
@@ -31,9 +26,9 @@ impl EncoderState {
 
 	#[inline]
 	/// update the state.
-	fn update(&mut self, byte: u8) {
+	fn update(&mut self, chunk: T) {
 		self.shift();
-		self.0 = byte;
+		self.0 = chunk;
 	}
 }
 
@@ -51,7 +46,7 @@ mod tests {
 		}
 	}
 
-	fn eq(state: &EncoderState, x: u8) {
+	fn eq(state: &EncoderState<u8>, x: u8) {
 		let (a, b) = convert(x);
 		assert_eq!(state.0, a);
 		assert_eq!(state.1, b);
@@ -59,7 +54,7 @@ mod tests {
 
 	#[test]
 	fn test_state_updating() {
-		let mut state = EncoderState::default();
+		let mut state = EncoderState::<u8>::default();
 
 		state.update(0x00);
 		eq(&state, 0b00);
