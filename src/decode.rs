@@ -35,17 +35,29 @@ impl BitDecoderState {
 
 	fn states(&self) -> Vec<u8> {
 		match self.level {
-			0 => vec![0], // i don't think this one is used
+			0 => vec![0],
 			1 => vec![0, 1],
 			_ => vec![0, 1, 2, 3]
 		}
 	}
 
+	fn get_any_link_mut(&mut self, level: u8, pos: u8) -> &mut Option<Link> {
+		&mut self.trellis[level as usize][pos as usize]
+	}
+
+	fn get_any_link(&self, level: u8, pos: u8) -> Option<Link> {
+		self.trellis[level as usize][pos as usize]
+	}
+
+	fn get_link_mut(&mut self, pos: u8) -> &mut Option<Link> {
+		self.get_any_link_mut(self.level, pos)
+	}
+
 	fn add_link(&mut self, new_link: Link, pos: u8) {
-		if let Some(mut current_link) = self.trellis[self.level as usize][pos as usize] {
+		if let Some(mut current_link) = self.get_link_mut(pos) {
 			current_link.minimize_cost(new_link);
 		} else {
-			self.trellis[self.level as usize][pos as usize] = Some(new_link)
+			*self.get_link_mut(pos) = Some(new_link);
 		}
 	}
 
@@ -54,7 +66,7 @@ impl BitDecoderState {
 		if self.level == 0 {
 			0
 		} else {
-			self.trellis[(self.level - 1) as usize][state as usize].unwrap().cost
+			self.get_any_link(self.level, state).unwrap().cost
 		}
 	}
 }
