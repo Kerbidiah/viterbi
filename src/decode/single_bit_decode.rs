@@ -2,7 +2,7 @@ use crate::common::*;
 use crate::encode::EncoderState;
 
 #[derive(Debug)]
-struct BitDecoderState {
+pub struct BitDecoderState {
 	trellis: Vec<[Option<Link>; 4]>, // TODO: remove option? it would make the code less nice, but its not actually doing much
 	level: u8
 }
@@ -31,6 +31,39 @@ impl BitDecoderState {
 		}
 
 		self.level += 1;
+	}
+
+	/// ouputs a vector of u8s where only the correct bits are set to 1
+	pub fn read(&self, bit: u8) -> Vec<u8> {
+		// TODO: figure out what to do if the decoder isn't yet full
+		// for now, just assert that it is
+		assert!(self.trellis.last().unwrap()[0].is_some());
+
+		let mut ans = vec![0; self.level as usize];
+
+		let last_index = self.level - 1;
+
+		// find the link to start from
+		let mut min_cost_state = 0;
+		let mut min_cost = self.get_any_link(last_index, min_cost_state).unwrap().cost;
+
+		for x in 1..4 {
+			let current_cost = self.get_any_link(last_index, x).unwrap().cost;
+			if current_cost < min_cost {
+				min_cost = current_cost;
+				min_cost_state = x;
+			}
+		}
+
+		// follow the links to the start and record what bit we think was encoded
+		for offset in 0..=last_index {
+			let i = last_index - offset; // index from end to start
+			ans[i as usize] = map_to(min_cost_state & BIT_MASK[0], bit);
+
+			min_cost_state = self.get_any_link(i, min_cost_state).unwrap().prev_state;
+		}
+
+		ans
 	}
 
 	fn states(&self) -> Vec<u8> {

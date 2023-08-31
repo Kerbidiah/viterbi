@@ -10,7 +10,7 @@ pub struct EncoderState<T: BitXor + Copy>(T, T);
 
 impl<T: BitXor<Output = T> + Copy> EncoderState<T> {
 	/// input a chunk to the encoder, updating state and returning the 2 chunks that should be transmitted
-	pub fn input(&mut self, chunk: T) -> (T, T) {
+	pub fn push(&mut self, chunk: T) -> (T, T) {
 		let ans = (
 			self.1 ^ chunk,
 			self.0 ^ self.1 ^ chunk
@@ -57,9 +57,24 @@ impl EncoderState<u8> {
 	/// does the same thing as input, but it combines the 2 bytes into a bit pair
 	/// 
 	/// NOTE: this won't work in a usefull manner if you are using the EncoderState to encode multiple bits side by side
-	pub fn input_w_bitpair_return(&mut self, chunk: u8) -> u8 {
-		let (s0, s1) = self.input(chunk);
+	/// its only purpose really is for testing
+	pub fn input_w_bitpair_return(&mut self, byte: u8) -> u8 {
+		let (s0, s1) = self.push(byte);
 		combine(s1, s0)
+	}
+
+	// fn push_return_bytepair(&mut self, byte: u8) -> [u8; 2] {
+
+	// }
+
+	pub fn push_slice(&mut self, arr: &[u8]) -> Vec<u8> {
+		let mut ans = Vec::with_capacity(arr.len() * 2);
+
+		for each in arr {
+
+		}
+
+		ans
 	}
 }
 
