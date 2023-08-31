@@ -2,7 +2,7 @@ use std::ops::BitXor;
 
 use crate::common::*;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 /// represents the internal state of multiple encoders. (each bit is its own encoder)
 /// 
 /// for more detail on how this works see [this video](https://youtu.be/kRIfpmiMCpU)
@@ -22,14 +22,9 @@ impl<T: BitXor<Output = T> + Copy> EncoderState<T> {
 	}
 
 	#[inline]
-	fn shift(&mut self) {
-		self.1 = self.0;
-	}
-
-	#[inline]
 	/// update the state.
 	fn update(&mut self, chunk: T) {
-		self.shift();
+		self.1 = self.0;
 		self.0 = chunk;
 	}
 }
@@ -37,10 +32,10 @@ impl<T: BitXor<Output = T> + Copy> EncoderState<T> {
 impl From<u8> for EncoderState<u8> {
 	fn from(value: u8) -> Self {
 		match value {
-			0b00 => Self(0x00, 0x00),
-			0b01 => Self(0xFF, 0x00),
-			0b10 => Self(0x00, 0xFF),
-			0b11 => Self(0xFF, 0xFF),
+			0 => Self(0x00, 0x00),
+			1 => Self(0xFF, 0x00),
+			2 => Self(0x00, 0xFF),
+			3 => Self(0xFF, 0xFF),
 			_ => unreachable!()
 		}
 	}
@@ -48,30 +43,28 @@ impl From<u8> for EncoderState<u8> {
 
 impl From<EncoderState<u8>> for u8 {
 	fn from(value: EncoderState<u8>) -> Self {
-		combine(value.1, value.0)
+		combine(value.0, value.1)
 	}
 }
 
 impl EncoderState<u8> {
-	// TODO: rename this function. Its name is so bad
 	/// does the same thing as input, but it combines the 2 bytes into a bit pair
 	/// 
 	/// NOTE: this won't work in a usefull manner if you are using the EncoderState to encode multiple bits side by side
 	/// its only purpose really is for testing
-	pub fn input_w_bitpair_return(&mut self, byte: u8) -> u8 {
+	pub fn push_return_bitpair(&mut self, byte: u8) -> u8 { // todo kill???
 		let (s0, s1) = self.push(byte);
-		combine(s1, s0)
+		combine(s0, s1)
 	}
-
-	// fn push_return_bytepair(&mut self, byte: u8) -> [u8; 2] {
-
-	// }
 
 	pub fn push_slice(&mut self, arr: &[u8]) -> Vec<u8> {
 		let mut ans = Vec::with_capacity(arr.len() * 2);
 
 		for each in arr {
-
+			let pair = self.push(*each);
+			
+			ans.push(pair.0);
+			ans.push(pair.1);
 		}
 
 		ans
@@ -82,62 +75,82 @@ impl EncoderState<u8> {
 mod tests {
 	use super::*;
 
-	fn convert(x: u8) -> (u8, u8) {
-		match x {
-			0b00 => (0x00, 0x00),
-			0b01 => (0xFF, 0x00),
-			0b10 => (0x00, 0xFF),
-			0b11 => (0xFF, 0xFF),
-			_ => unreachable!()
-		}
-	}
-
-	fn eq(state: &EncoderState<u8>, x: u8) {
-		let (a, b) = convert(x);
-		assert_eq!(state.0, a);
-		assert_eq!(state.1, b);
+	fn state_eq(state: &EncoderState<u8>, correct: u8) {
+		let x: EncoderState<u8> = correct.into();
+		assert_eq!(state, &x);
 	}
 
 	#[test]
 	fn test_state_updating() {
 		let mut state = EncoderState::<u8>::default();
 
-		state.update(0x00);
-		eq(&state, 0b00);
-		state.update(0xFF);
-		eq(&state, 0b01);
-		state.update(0x00);
-		eq(&state, 0b10);
+		state.push(0x00);
+		state_eq(&state, 0);
 
-		state = EncoderState(0xFF, 0x00);
-		state.update(0xFF);
-		eq(&state, 0b11);
-		state.update(0xFF);
-		eq(&state, 0b11);
-		state.update(0x00);
-		eq(&state, 0b10);
-		state.update(0xFF);
-		eq(&state, 0b01);
+		state.push(0xFF);
+		state_eq(&state, 1);
 
-		state = EncoderState(0x00, 0xFF);
-		state.update(0x00);
-		eq(&state, 0b00);
+		state.push(0xFF);
+		state_eq(&state, 3);
+		state = 1.into();
+
+		state.push(0x00);
+		state_eq(&state, 2);
+
+		state.push(0x00);
+		state_eq(&state, 0);
+		state = 2.into();
+
+		state.push(0xFF);
+		state_eq(&state, 1);
+		state = 3.into();
+
+		state.push(0x00);
+		state_eq(&state, 2);
+		state = 3.into();
+
+		state.push(0xFF);
+		state_eq(&state, 3);
 	}
 
 	#[test]
 	fn test_to_from_encoder_state() {
 		for x in 0u8..4 {
 			let state: EncoderState<u8> = x.into();
-			assert_eq!(x, dbg!(state.into()));
+			assert_eq!(x, state.into());
 		}
 	}
-	
-	#[test]
-	fn test_to_encoder_state() {
-		let mut state: EncoderState<u8> = 0b10.into();
-		assert_eq!(state.1, 0xFF);
 
-		state = 0b01.into();
-		assert_eq!(state.0, 0xFF);
+	#[test]
+	fn test_from_u8() {
+		let arr_a: [EncoderState<u8>; 4] = [
+			0.into(),
+			1.into(),
+			2.into(),
+			3.into(),
+		];
+
+		let arr_b: [EncoderState<u8>; 4] = [
+			EncoderState(0, 0),
+			EncoderState(0xFF, 0),
+			EncoderState(0, 0xFF),
+			EncoderState(0xFF, 0xFF)
+		];
+
+		assert_eq!(arr_a, arr_b);
+	}
+
+	#[test]
+	fn test_to_u8() {
+		let arr_a: [u8; 4] = [
+			EncoderState(0, 0).into(),
+			EncoderState(0xFF, 0).into(),
+			EncoderState(0, 0xFF).into(),
+			EncoderState(0xFF, 0xFF).into(),
+		];
+			
+		let arr_b: [u8; 4] = [0, 1, 2, 3];
+
+		assert_eq!(arr_a, arr_b);
 	}
 }

@@ -21,9 +21,9 @@ impl BitDecoderState {
 	/// push a pair of bits to be decoded
 	/// 
 	/// takes u8s instead of bools for conveince (just do a `bitwise and` between the mask and the byte)
-	pub fn push(&mut self, s1: u8, s0: u8) {
-		let bit_pair = combine(s1, s0);
-		
+	pub fn push(&mut self, s0: u8, s1: u8) {
+		let bit_pair = combine(s0, s1);
+
 		for state in self.states() {
 			for (link, pos) in Link::next(state, bit_pair, self.prev_cost(state)) {
 				self.add_link(link, pos);
@@ -39,7 +39,7 @@ impl BitDecoderState {
 		// for now, just assert that it is
 		assert!(self.trellis.last().unwrap()[0].is_some());
 
-		let mut ans = vec![0; self.level as usize];
+		let mut ans = Vec::with_capacity(self.level as usize);
 
 		let last_index = self.level - 1;
 
@@ -58,7 +58,13 @@ impl BitDecoderState {
 		// follow the links to the start and record what bit we think was encoded
 		for offset in 0..=last_index {
 			let i = last_index - offset; // index from end to start
-			ans[i as usize] = map_to(min_cost_state & BIT_MASK[0], bit);
+			
+			// if bit == 1 {
+			// 	dbg!(i, min_cost_state);
+			// 	dbg!(self.trellis[i as usize][min_cost_state as usize]);
+			// }
+
+			ans.push(map_to(min_cost_state & BIT_MASK[0], bit));
 
 			min_cost_state = self.get_any_link(i, min_cost_state).unwrap().prev_state;
 		}
@@ -99,12 +105,12 @@ impl BitDecoderState {
 		if self.level == 0 {
 			0
 		} else {
-			self.get_any_link(self.level, state).unwrap().cost
+			self.get_any_link(self.level - 1, state).unwrap().cost
 		}
 	}
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Link {
 	pub prev_state: u8,
 
@@ -113,7 +119,7 @@ struct Link {
 }
 
 impl Link {
-	/// return the correct 2 links and where the link should be placed
+	/// return the next 2 links and where the link should be placed
 	pub fn next(state: u8, bit_pair: u8, prev_cost: u8) -> [(Self, u8); 2] {
 		[
 			Self::generate(state, bit_pair, prev_cost, 0),
@@ -134,11 +140,9 @@ impl Link {
 		* hamming dist is between bit_pair and what comes out of the encoder.input_byte_out function
 		* the correct placement for each link is the internal state of its encoder after inputting the 1 or 0
 		 */
-		
-		debug_assert!(bit <= 1); // I don't know if this is actually needed, but it can't hurt
 
 		let mut encoder: EncoderState<u8> = state.into();
-		let hypothetical_bit_pair = encoder.input_w_bitpair_return(bit);
+		let hypothetical_bit_pair = encoder.push_return_bitpair(stretch(bit));
 
 		(
 			Self {
@@ -162,8 +166,63 @@ mod tests {
 	fn test_hamming_distance() {
 		assert_eq!(Link::hamming_dist(255, 0), 8);
 		assert_eq!(Link::hamming_dist(1, 0), 1);
+		assert_eq!(Link::hamming_dist(2, 0), 1);
+		assert_eq!(Link::hamming_dist(2, 1), 2);
 		assert_eq!(Link::hamming_dist(0, 0), 0);
 		assert_eq!(Link::hamming_dist(255, 255), 0);
 		assert_eq!(Link::hamming_dist(0b00010101, 0b00000100), 2);
+	}
+
+	#[test]
+	fn test_minimize_cost() {
+		let mut link_a = Link {
+			prev_state: 0,
+			cost: 10
+		};
+
+		let link_b = Link {
+			prev_state: 1,
+			cost: 11
+		};
+
+		link_a.minimize_cost(link_b);
+
+		assert_eq!(link_a.prev_state, 0);
+		assert_eq!(link_a.cost, 10);
+
+		let link_c = Link {
+			prev_state: 2,
+			cost: 9,
+		};
+
+		link_a.minimize_cost(link_c);
+
+		assert_eq!(link_a.prev_state, 2);
+		assert_eq!(link_a.cost, 9);
+	}
+
+	#[test]
+	fn test_next_link() {
+		let arr = Link::next(1, 2, 0);
+		
+		assert_eq!(arr[0].0, Link {
+			prev_state: 1,
+			cost: 0
+		});
+
+		assert_eq!(arr[1].0, Link {
+			prev_state: 1,
+			cost: 2
+		});
+	}
+
+	#[test]
+	fn test_generate_link() {
+		let (link_0, _) = Link::generate(1, 2, 0, 1);
+
+		assert_eq!(link_0, Link {
+			prev_state: 1,
+			cost: 2
+		});
 	}
 }

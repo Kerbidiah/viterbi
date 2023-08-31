@@ -5,7 +5,7 @@ use crate::common::*;
 
 #[derive(Debug)]
 pub struct DecoderState {
-	decoders: [BitDecoderState; 8]
+	pub decoders: [BitDecoderState; 8]
 }
 
 impl DecoderState {
@@ -26,7 +26,22 @@ impl DecoderState {
 
 	pub fn push(&mut self, byte0: u8, byte1: u8) {
 		for i in 0..8 {
-			self.decoders[i].push(byte1 & BIT_MASK[i], byte0 & BIT_MASK[i])
+			self.decoders[i].push(byte0 & BIT_MASK[i], byte1 & BIT_MASK[i]) // swap???
+		}
+	}
+
+	pub fn push_slice(&mut self, arr: &[u8]) {
+		let mut i = 0;
+
+		while i < arr.len() {
+			let byte0 = arr[i];
+
+			i += 1;
+			let byte1 = arr[i];
+
+			self.push(byte0, byte1);
+
+			i += 1;
 		}
 	}
 
