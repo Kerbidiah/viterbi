@@ -19,7 +19,7 @@ impl BitDecoderState {
 	}
 
 	/// push a pair of bits to be decoded
-	/// 
+	///
 	/// takes u8s instead of bools for conveince (just do a `bitwise and` between the mask and the byte)
 	pub fn push(&mut self, s0: u8, s1: u8) {
 		let bit_pair = combine(s0, s1);
@@ -58,11 +58,6 @@ impl BitDecoderState {
 		// follow the links to the start and record what bit we think was encoded
 		for offset in 0..=last_index {
 			let i = last_index - offset; // index from end to start
-			
-			// if bit == 1 {
-			// 	dbg!(i, min_cost_state);
-			// 	dbg!(self.trellis[i as usize][min_cost_state as usize]);
-			// }
 
 			ans.push(map_to(min_cost_state & BIT_MASK[0], bit));
 
@@ -204,7 +199,7 @@ mod tests {
 	#[test]
 	fn test_next_link() {
 		let arr = Link::next(1, 2, 0);
-		
+
 		assert_eq!(arr[0].0, Link {
 			prev_state: 1,
 			cost: 0

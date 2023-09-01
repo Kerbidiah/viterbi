@@ -2,12 +2,6 @@
 
 #[inline]
 /// combine s1 and s0 into the lower 2 bits of a u8
-pub fn combine_old(s1: u8, s0: u8) -> u8 {
-	map_to(s1, BIT_MASK[1]) | squish(s0)
-}
-
-#[inline]
-/// combine s1 and s0 into the lower 2 bits of a u8
 pub fn combine(s0: u8, s1: u8) -> u8 {
 	map_to(s1, BIT_MASK[1]) | squish(s0)
 }
@@ -42,6 +36,31 @@ pub fn squish(num: u8) -> u8 {
 /// Any input >= 1 becomes 255 (aka `0b11111111`)
 pub fn stretch(num: u8) -> u8 {
 	map_to(num, 0xFF)
+}
+
+pub fn eprint_bin(arr: &[u8], tag: Option<&str>) {
+	if let Some(s) = tag {
+		eprintln!("{}:", s);
+	}
+	for b in arr {
+		eprintln!("{:#010b}, {b:#3}", b);
+	}
+	eprintln!();
+}
+
+pub fn eprint_diff(arr1: &[u8], arr2: &[u8]) {
+	let diff: Vec<u8> = arr1.iter().zip(arr2)
+		.map(|x| {
+			x.0 ^ x.1
+		}).collect();
+
+	eprint_bin(&diff, Some("diff"));
+}
+
+pub fn eprint_bytes_masked(arr: &[u8], mask: u8) {
+	for b in arr {
+		eprintln!("{}", b & mask);
+	}
 }
 
 #[cfg(test)]
