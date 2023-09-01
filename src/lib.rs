@@ -63,43 +63,6 @@ mod tests {
 		assert_eq!(bytes, output);
 	}
 
-	#[ignore = "non-minimal testcase"]
-	#[test]
-	fn test_round_trip_3_ff() {
-		let bytes = vec![0xFF; 3];
-
-		let mut encoder: EncoderState<u8> = EncoderState::default();
-		let data_encoded = encoder.push_slice(&bytes);
-
-		let mut decoder = DecoderState::new(bytes.len());
-		decoder.push_slice(&data_encoded);
-		let output = decoder.read();
-
-		eprint_bin(&bytes, Some("bytes"));
-		eprint_bin(&output, Some("output"));
-		eprint_diff(&output, &bytes);
-
-		assert_eq!(bytes, output);
-	}
-
-	#[test]
-	fn test_round_trip_ff_ff_00() {
-		let bytes = vec![0xFF, 0xFF, 0x00];
-
-		let mut encoder: EncoderState<u8> = EncoderState::default();
-		let data_encoded = encoder.push_slice(&bytes);
-
-		let mut decoder = DecoderState::new(bytes.len());
-		decoder.push_slice(&data_encoded);
-		let output = decoder.read();
-
-		eprint_bin(&bytes, Some("bytes"));
-		eprint_bin(&output, Some("output"));
-		eprint_diff(&output, &bytes);
-
-		assert_eq!(bytes, output);
-	}
-
 	#[test]
 	fn test_round_trip_ff_ff_00_00() {
 		let bytes = vec![0xFF, 0xFF, 0x00, 0x00];
@@ -122,24 +85,6 @@ mod tests {
 	#[test]
 	fn test_round_trip_ff_00_00_00_00() {
 		let bytes = vec![0xFF, 0x00, 0x00, 0x00, 0x00];
-
-		let mut encoder: EncoderState<u8> = EncoderState::default();
-		let data_encoded = encoder.push_slice(&bytes);
-
-		let mut decoder = DecoderState::new(bytes.len());
-		decoder.push_slice(&data_encoded);
-		let output = decoder.read();
-
-		eprint_bin(&bytes, Some("bytes"));
-		eprint_bin(&output, Some("output"));
-		eprint_diff(&output, &bytes);
-
-		assert_eq!(bytes, output);
-	}
-
-	#[test]
-	fn test_round_trip_00_00_ff() {
-		let bytes = vec![0x00, 0x00, 0xFF];
 
 		let mut encoder: EncoderState<u8> = EncoderState::default();
 		let data_encoded = encoder.push_slice(&bytes);
