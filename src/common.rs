@@ -63,6 +63,11 @@ pub fn eprint_bytes_masked(arr: &[u8], mask: u8) {
 	}
 }
 
+pub fn state_to_bit(state: u8, bit: u8) -> u8 {
+	debug_assert!(state < 4);
+	map_to(state & BIT_MASK[0], bit)
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -103,6 +108,29 @@ mod tests {
 			assert_eq!(combine(x, 0), 1);
 			assert_eq!(combine(0, x), 2);
 			assert_eq!(combine(x, x), 3);
+		}
+	}
+
+	#[test]
+	fn test_bit_mask() {
+		for i in 0..8 {
+			assert_eq!(1 << i, BIT_MASK[i])
+		}
+	}
+
+	fn test_state_to_bit() {
+		for state in 0..4 {
+			for bit in BIT_MASK {
+				let x = match state {
+					0 => 0,
+					1 => bit,
+					2 => 0,
+					3 => bit,
+					_ => unreachable!(),
+				};
+
+				assert_eq!(x, state_to_bit(state, bit))
+			}
 		}
 	}
 }
