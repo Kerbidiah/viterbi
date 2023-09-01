@@ -114,6 +114,14 @@ mod tests {
 	}
 
 	#[test]
+	fn test_encoder_ouptut() {
+		let mut state: EncoderState<u8> = EncoderState::default();
+
+		let pair = state.push(0xFF);
+		assert_eq!(pair, (0xFF, 0xFF));
+	}
+
+	#[test]
 	fn test_to_from_encoder_state() {
 		for x in 0u8..4 {
 			let state: EncoderState<u8> = x.into();

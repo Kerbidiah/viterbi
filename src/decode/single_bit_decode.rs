@@ -3,18 +3,18 @@ use crate::encode::EncoderState;
 
 #[derive(Debug)]
 pub struct BitDecoderState {
-	trellis: Vec<[Option<Link>; 4]>, // TODO: remove option? it would make the code less nice, but its not actually doing much
-	level: u8
+	trellis: Vec<[Link; 4]>,
 }
 
 impl BitDecoderState {
-	pub fn new(len: usize) -> Self {
-		assert!(len <= 127);
-		assert!(len >= 2); // idk if this is needed
+	/// entering the right capacity will prevent any additional memory allocations while pushing bits
+	/// into the decoder
+	pub fn new(capacity: usize) -> Self {
+		assert!(capacity <= 127);
+		assert!(capacity >= 2); // idk if this is needed
 
 		Self {
-			trellis: vec![[None; 4]; len],
-			level: 0
+			trellis: Vec::with_capacity(capacity),
 		}
 	}
 
@@ -22,90 +22,101 @@ impl BitDecoderState {
 	///
 	/// takes u8s instead of bools for conveince (just do a `bitwise and` between the mask and the byte)
 	pub fn push(&mut self, s0: u8, s1: u8) {
+		if self.len() >= 127 {
+			panic!("TOO MANY BITS BEING DECODED BEFORE RESET")
+		}
+
 		let bit_pair = combine(s0, s1);
+
+		self.add_column();
 
 		for state in self.states() {
 			for (link, pos) in Link::next(state, bit_pair, self.prev_cost(state)) {
 				self.add_link(link, pos);
 			}
 		}
-
-		self.level += 1;
 	}
 
-	/// ouputs a vector of u8s where only the correct bits are set to 1
-	pub fn read(&self, bit: u8) -> Vec<u8> {
-		// TODO: figure out what to do if the decoder isn't yet full
-		// for now, just assert that it is
-		assert!(self.trellis.last().unwrap()[0].is_some());
-
-		let mut ans = Vec::with_capacity(self.level as usize);
-
-		let last_index = self.level - 1;
-
-		// find the link to start from
-		let mut min_cost_state = 0;
-		let mut min_cost = self.get_any_link(last_index, min_cost_state).unwrap().cost;
-
-		for x in 1..4 {
-			let current_cost = self.get_any_link(last_index, x).unwrap().cost;
-			if current_cost < min_cost {
-				min_cost = current_cost;
-				min_cost_state = x;
-			}
-		}
-
-		// follow the links to the start and record what bit we think was encoded
-		for offset in 0..=last_index {
-			let i = last_index - offset; // index from end to start
-
-			ans.push(map_to(min_cost_state & BIT_MASK[0], bit));
-
-			min_cost_state = self.get_any_link(i, min_cost_state).unwrap().prev_state;
-		}
-
-		ans
+	fn add_column(&mut self) {
+		self.trellis.push([Link::NONE; 4]);
 	}
 
 	fn states(&self) -> Vec<u8> {
-		match self.level {
-			0 => vec![0],
-			1 => vec![0, 1],
+		match self.len() {
+			0 => unreachable!(), // should only be called after adding first column to vec
+			1 => vec![0],
+			2 => vec![0, 1],
 			_ => vec![0, 1, 2, 3]
 		}
 	}
 
-	fn get_any_link_mut(&mut self, level: u8, pos: u8) -> &mut Option<Link> {
-		&mut self.trellis[level as usize][pos as usize]
+	/// ouputs a vector of u8s where only the correct bits are set to 1
+	pub fn read(&mut self, bit: u8) -> Vec<u8> {
+		// TODO: figure out what to do if the decoder hasn't been given enough data
+		// for now, just assert that it has
+		assert!(self.len() > 1);
+
+		let mut ans = Vec::with_capacity(self.len());
+
+		// find the link to start from
+		let mut pos = self.find_start_pos();
+
+		// follow the links to the start and record what bit we think was encoded
+		while !self.trellis.is_empty() {
+			// record the bit
+			ans.push(state_to_bit(pos, bit));
+
+			// get position of next link
+			pos = self.get_last_link(pos).prev_state;
+
+			// ditch the current column, thus moving onto next column
+			self.trellis.pop().unwrap();
+		}
+
+		ans.reverse(); // TODO: fill array backwards instead of reversing
+
+		ans
 	}
 
-	fn get_any_link(&self, level: u8, pos: u8) -> Option<Link> {
-		self.trellis[level as usize][pos as usize]
+	fn len(&self) -> usize {
+		self.trellis.len()
 	}
 
-	fn get_link_mut(&mut self, pos: u8) -> &mut Option<Link> {
-		self.get_any_link_mut(self.level, pos)
+	fn get_link(&self, index: usize, pos: u8) -> Link {
+		self.trellis[index][pos as usize].clone()
+	}
+
+	fn get_last_link(&self, pos: u8) -> Link {
+		self.trellis.last().unwrap()[pos as usize].clone()
 	}
 
 	fn add_link(&mut self, new_link: Link, pos: u8) {
-		if let Some(mut current_link) = self.get_link_mut(pos) {
-			current_link.minimize_cost(new_link);
-		} else {
-			*self.get_link_mut(pos) = Some(new_link);
-		}
+		self.trellis
+			.last_mut()
+			.unwrap()[pos as usize]
+			.minimize_cost(new_link);
 	}
 
-	#[inline]
-	fn prev_cost(&self, state: u8) -> u8 {
-		if self.level == 0 {
-			0
-		} else {
-			self.get_any_link(self.level - 1, state).unwrap().cost
+	fn find_start_pos(&self) -> u8 {
+		self.trellis
+			.last().unwrap()
+			.iter().enumerate().min_by_key(|(_, link)| link.cost)
+			.unwrap().0 as u8
+	}
+
+
+	fn prev_cost(&self, pos: u8) -> u8 {
+		match self.len() {
+			0 => unreachable!(), // should only be called after adding first column to vec
+			1 => 0, // there is no previous link
+			_ => {
+				self.get_link(self.len() - 2, pos).cost
+			}
 		}
 	}
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Link {
 	pub prev_state: u8,
 
@@ -114,6 +125,11 @@ struct Link {
 }
 
 impl Link {
+	pub const NONE: Self = Link {
+		prev_state: 255,
+		cost: 255,
+	};
+
 	/// return the next 2 links and where the link should be placed
 	pub fn next(state: u8, bit_pair: u8, prev_cost: u8) -> [(Self, u8); 2] {
 		[

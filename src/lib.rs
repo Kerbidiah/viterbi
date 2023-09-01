@@ -44,7 +44,6 @@ mod tests {
 		assert_eq!(bytes, output);
 	}
 
-	#[ignore = "output too long"]
 	#[test]
 	fn test_round_trip_full_ff() {
 		let bytes = vec![0xFF; 127];
@@ -81,7 +80,6 @@ mod tests {
 		assert_eq!(bytes, output);
 	}
 
-	#[ignore = "non-minimal testcase"]
 	#[test]
 	fn test_round_trip_ff_00_00_00_00() {
 		let bytes = vec![0xFF, 0x00, 0x00, 0x00, 0x00];
@@ -111,11 +109,16 @@ mod tests {
 		let mut encoder: EncoderState<u8> = EncoderState::default();
 		let data_encoded = encoder.push_slice(&bytes);
 
+		eprint_bin(&bytes, Some("bytes"));
+		eprint_bin(&data_encoded, Some("data"));
+
 		let mut decoder = DecoderState::new(bytes.len());
 		decoder.push_slice(&data_encoded);
+		
+		dbg!(&decoder.decoders[7]);
+		
 		let output = decoder.read();
 
-		eprint_bin(&bytes, Some("bytes"));
 		eprint_bin(&output, Some("output"));
 		eprint_diff(&bytes, &output);
 
@@ -138,11 +141,13 @@ mod tests {
 		let mut encoder: EncoderState<u8> = EncoderState::default();
 		let data_encoded = encoder.push_slice(&bytes);
 
+		eprint_bin(&bytes, Some("bytes"));
+		eprint_bin(&data_encoded, Some("data"));
+
 		let mut decoder = DecoderState::new(bytes.len());
 		decoder.push_slice(&data_encoded);
 		let output = decoder.read();
 
-		eprint_bin(&bytes, Some("bytes"));
 		eprint_bin(&output, Some("output"));
 		eprint_diff(&bytes, &output);
 
@@ -164,6 +169,8 @@ mod tests {
 
 		let mut encoder: EncoderState<u8> = EncoderState::default();
 		let data_encoded = encoder.push_slice(&bytes);
+
+		eprint_bin(&data_encoded, Some("data"));
 
 		let mut decoder = DecoderState::new(bytes.len());
 		decoder.push_slice(&data_encoded);
