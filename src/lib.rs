@@ -37,10 +37,6 @@ mod tests {
 		decoder.push_slice(&data_encoded);
 		let output = decoder.read();
 
-		eprint_bin(&bytes, Some("bytes"));
-		eprint_bin(&output, Some("output"));
-		eprint_diff(&output, &bytes);
-
 		assert_eq!(bytes, output);
 	}
 
@@ -54,10 +50,6 @@ mod tests {
 		let mut decoder = DecoderState::new(bytes.len());
 		decoder.push_slice(&data_encoded);
 		let output = decoder.read();
-
-		eprint_bin(&bytes, Some("bytes"));
-		eprint_bin(&output, Some("output"));
-		eprint_diff(&output, &bytes);
 
 		assert_eq!(bytes, output);
 	}
@@ -73,10 +65,6 @@ mod tests {
 		decoder.push_slice(&data_encoded);
 		let output = decoder.read();
 
-		eprint_bin(&bytes, Some("bytes"));
-		eprint_bin(&output, Some("output"));
-		eprint_diff(&output, &bytes);
-
 		assert_eq!(bytes, output);
 	}
 
@@ -90,10 +78,6 @@ mod tests {
 		let mut decoder = DecoderState::new(bytes.len());
 		decoder.push_slice(&data_encoded);
 		let output = decoder.read();
-
-		eprint_bin(&bytes, Some("bytes"));
-		eprint_bin(&output, Some("output"));
-		eprint_diff(&output, &bytes);
 
 		assert_eq!(bytes, output);
 	}
@@ -109,18 +93,10 @@ mod tests {
 		let mut encoder: EncoderState<u8> = EncoderState::default();
 		let data_encoded = encoder.push_slice(&bytes);
 
-		eprint_bin(&bytes, Some("bytes"));
-		eprint_bin(&data_encoded, Some("data"));
-
 		let mut decoder = DecoderState::new(bytes.len());
 		decoder.push_slice(&data_encoded);
 		
-		dbg!(&decoder.decoders[7]);
-		
 		let output = decoder.read();
-
-		eprint_bin(&output, Some("output"));
-		eprint_diff(&bytes, &output);
 
 		assert_eq!(bytes, output);
 	}
@@ -141,15 +117,9 @@ mod tests {
 		let mut encoder: EncoderState<u8> = EncoderState::default();
 		let data_encoded = encoder.push_slice(&bytes);
 
-		eprint_bin(&bytes, Some("bytes"));
-		eprint_bin(&data_encoded, Some("data"));
-
 		let mut decoder = DecoderState::new(bytes.len());
 		decoder.push_slice(&data_encoded);
 		let output = decoder.read();
-
-		eprint_bin(&output, Some("output"));
-		eprint_diff(&bytes, &output);
 
 		assert_eq!(bytes, output);
 	}
@@ -170,15 +140,9 @@ mod tests {
 		let mut encoder: EncoderState<u8> = EncoderState::default();
 		let data_encoded = encoder.push_slice(&bytes);
 
-		eprint_bin(&data_encoded, Some("data"));
-
 		let mut decoder = DecoderState::new(bytes.len());
 		decoder.push_slice(&data_encoded);
 		let output = decoder.read();
-
-		eprint_bin(&bytes, Some("bytes"));
-		eprint_bin(&output, Some("output"));
-		eprint_diff(&bytes, &output);
 
 		assert_eq!(bytes, output);
 	}
