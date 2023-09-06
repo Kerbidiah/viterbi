@@ -1,6 +1,8 @@
 mod single_bit_decode;
+mod single_bit_rc_decode;
 
 use single_bit_decode::BitDecoderState;
+// use single_bit_rc_decode::BitDecoderState;
 use crate::common::*;
 
 #[derive(Debug)]
