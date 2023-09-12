@@ -64,6 +64,23 @@ impl BitDecoderState {
 		self.end_links = new_endlinks;
 		self.len += 1;
 	}
+
+	// TODO: optimize
+	pub fn read(&self) -> Vec<u8> {
+		let mut ans = vec![0; self.len];
+
+		let mut link = self.end_links.iter()
+			.min_by_key(|link| link.as_ref().unwrap().cost)
+			.unwrap().clone().unwrap();
+
+		for backwards_index in 1..=self.len {
+			let i = self.len - backwards_index;
+			ans[i] = link.bit;
+			link = link.prev_link.clone().unwrap_or_else(|| Link::DEAD_LINK.to_rc_link());
+		}
+
+		ans
+	}
 }
 
 type RcLink = Rc<Link>;
