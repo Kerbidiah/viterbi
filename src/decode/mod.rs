@@ -4,6 +4,8 @@ mod single_bit_rc_decode;
 use single_bit_decode::BitDecoderState;
 use crate::common::*;
 
+use rayon::prelude::*;
+
 #[derive(Debug)]
 pub struct DecoderState {
 	pub decoders: [BitDecoderState; 8]
@@ -44,6 +46,25 @@ impl DecoderState {
 
 			i += 1;
 		}
+	}
+
+	pub fn push_slice_para(&mut self, arr: &[u8]) {
+		self.decoders.par_iter_mut()
+			.enumerate()
+			.for_each(|(b, decoder)| {
+				let mut i = 0;
+
+				while i < arr.len() {
+					let bit0 = arr[i] & BIT_MASK[b];
+
+					i += 1;
+					let bit1 = arr[i] & BIT_MASK[b];
+
+					decoder.push(bit0, bit1);
+
+					i += 1;
+				}
+			})
 	}
 
 	pub fn read(mut self) -> Vec<u8> {

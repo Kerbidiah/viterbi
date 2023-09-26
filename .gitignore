@@ -1,8 +1,9 @@
 /target
 /Cargo.lock
-*.pdf
+/.idea
 Screenshot 2023-08-29 153337.png
 Screenshot 2023-08-29 161458.png
 table.xlsx
 table.png
 *.txt
+*.pdf

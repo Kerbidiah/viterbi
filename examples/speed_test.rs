@@ -1,8 +1,8 @@
 use std::hint::black_box;
-use std::time::Instant;
+use std::time::{Instant, Duration};
 
 use clap::Parser;
-use bytes::{Bytes, Buf};
+use bytes::Bytes;
 use bytesize::ByteSize;
 use rand::prelude::*;
 
@@ -26,20 +26,22 @@ struct Cli {
 fn main() {
 	let cli = Cli::parse();
 
-	let ammount = cli.bytes.parse::<ByteSize>().unwrap();
+	let amount = cli.bytes.parse::<ByteSize>().unwrap();
 
-	if (ammount > ByteSize::gib(1)) && !cli.hashify {
+	if (amount > ByteSize::gib(1)) && !cli.hashify {
 		todo!("must use hashify for more than 1 GiB");
 	}
 	if cli.hashify {
 		todo!("hashing not yet implemented");
 	}
 
-	let mut ammount = ammount.as_u64() as usize;
-	ammount -= ammount % cli.packet_size; // trim ammount slightly so it works nicely
+	dbg!(amount);
+
+	let mut amount = amount.as_u64() as usize;
+	amount -= amount % cli.packet_size; // trim amount slightly so it works nicely
 
 	println!("random data generation starting");
-	let data = black_box(random_bytes(ammount));
+	let data = black_box(random_bytes(amount));
 	println!("data generation complete");
 	
 	println!("encoding is starting");
@@ -74,10 +76,52 @@ fn encode(data: Bytes, packet_len: usize) -> Bytes {
 }
 
 fn decode(data: Bytes, packet_len: usize) -> Bytes {
+	let mut push_timer = Timer::new("push");
+	let mut read_timer = Timer::new("read");
+
 	data.chunks_exact(packet_len * 2).map(|arr| {
 		let mut decoder = DecoderState::new(packet_len);
-		decoder.push_slice(&arr);
 
-		decoder.read()
+		push_timer.start();
+		decoder.push_slice(&arr);
+		push_timer.stop();
+
+		read_timer.start();
+		let temp = decoder.read();
+		read_timer.stop();
+
+		temp
 	}).flatten().collect()
+}
+
+struct Timer {
+	total: Duration,
+	time: Instant,
+	name: String,
+}
+
+impl Timer {
+	pub fn new(name: &str) -> Self {
+		Self {
+			total: Duration::from_nanos(0),
+			time: Instant::now(),
+			name: name.to_string(),
+		}
+	}
+
+	#[inline(always)]
+	pub fn start(&mut self) {
+		self.time = Instant::now();
+	}
+
+	#[inline(always)]
+	pub fn stop(&mut self) {
+		self.total += self.time.elapsed();
+	}
+}
+
+impl Drop for Timer {
+	fn drop(&mut self) {
+		eprintln!("{}: {:?}", self.name, self.total);
+	}
 }
